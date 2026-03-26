@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Entanda Secondary School - Grade 10 Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;margin:20px;background:#f4f8ff;}
+.header{text-align:center;color:#0a3d91;}
+input, select{border:none;border-bottom:1px solid #000;padding:3px;}
+.section-title{margin-top:30px;font-weight:bold;font-size:18px;color:#0a3d91;}
+table{width:100%;border-collapse:collapse;margin-top:10px;background:white;}
+th{background:#0a3d91;color:white;padding:8px;}
+td{border:1px solid #ccc;padding:6px;text-align:center;}
+.marks{width:60px;}
+button{background:#0a3d91;color:white;border:none;padding:6px 12px;cursor:pointer;margin:3px 0;}
+button:hover{background:#062866;}
+.footer{margin-top:40px;display:flex;justify-content:space-between;}
+.signature{width:200px;border-top:1px solid black;text-align:center;padding-top:5px;margin-top:40px;}
+.EE{color:green;font-weight:bold;}
+.ME{color:blue;font-weight:bold;}
+.AE{color:orange;font-weight:bold;}
+.BE{color:red;font-weight:bold;}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>Entanda Secondary School</h2>
+Term: <input id="term">
+Year: <input id="year">
+</div>
+
+<br>
+Student Name: <input id="name">
+Admission No: <input id="adm">
+Class: 
+<select id="class">
+<option value="Grade10">Grade 10</option>
+</select>
+
+<br><br>
+
+<div class="section-title">Grade 10 Subjects</div>
+<table><tbody id="grade10">
+<tr><td>English</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Kiswahili</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Mathematics</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Biology</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Chemistry</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Physics</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Geography</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>History</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>CRE</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Computer Studies</td><td><input class="marks" oninput="calculate()"></td></tr>
+<tr><td>Elective</td><td><input class="marks" oninput="calculate()"></td></tr>
+</tbody></table>
+
+<br>
+Total Marks: <span id="total">0</span><br>
+Level / Grade: <span id="meangrade">-</span><br>
+Best Subject: <span id="best">-</span><br>
+Weakest Subject: <span id="weak">-</span><br>
+Teacher Comment: <span id="comment">-</span>
+
+<div class="footer">
+<div class="signature">Class Teacher Signature</div>
+<div class="signature">Principal Signature</div>
+</div>
+
+<br><br>
+<button onclick="saveStudent()">SAVE STUDENT</button>
+<button onclick="updateStudent()">UPDATE STUDENT</button>
+<button onclick="loadAllDatabases()">LOAD CLASS DATABASE</button>
+
+<div class="section-title">Class Database</div>
+<div id="classDBs"></div>
+
+<script>
+
+function gradeSystemSubject(m){
+if(m>=81) return "E.E";
+if(m>=61) return "M.E";
+if(m>=51) return "A.E";
+return "B.E";
+}
+
+function gradeSystemTotal(total){
+if(total>=900) return "E.E"; 
+if(total>=700) return "M.E";
+if(total>=550) return "A.E";
+return "B.E";
+}
+
+function generateComment(avg){
+if(avg>=80) return "Excellent performance. Keep it up!";
+if(avg>=65) return "Good performance. Aim higher.";
+if(avg>=50) return "Fair performance. Improve effort.";
+return "Needs serious improvement.";
+}
+
+function calculate(){
+let total=0;
+let best={sub:"",marks:-1};
+let weak={sub:"",marks:101};
+
+const inputs=document.querySelectorAll(".marks");
+
+inputs.forEach(input=>{
+let m=parseInt(input.value)||0;
+const sub=input.parentElement.parentElement.children[0].innerText;
+total+=m;
+
+if(m>best.marks) best={sub,marks:m};
+if(m<weak.marks) weak={sub,marks:m};
+});
+
+document.getElementById("total").innerText=total;
+
+let avg=total/inputs.length;
+document.getElementById("meangrade").innerText=gradeSystemTotal(total);
+document.getElementById("best").innerText=best.sub+" ("+best.marks+")";
+document.getElementById("weak").innerText=weak.sub+" ("+weak.marks+")";
+document.getElementById("comment").innerText=generateComment(avg);
+}
+
+function saveStudent(){
+const key="Grade10_students";
+
+let student={
+name:name.value,
+adm:adm.value,
+term:term.value,
+year:year.value,
+subjects:{},total:0,level:"",best:"",weak:"",comment:""
+};
+
+const inputs=document.querySelectorAll(".marks");
+let best={sub:"",marks:-1};
+let weak={sub:"",marks:101};
+
+inputs.forEach(input=>{
+let sub=input.parentElement.parentElement.children[0].innerText;
+let m=parseInt(input.value)||0;
+
+student.subjects[sub]={marks:m,level:gradeSystemSubject(m)};
+student.total+=m;
+
+if(m>best.marks) best={sub,marks:m};
+if(m<weak.marks) weak={sub,marks:m};
+});
+
+let avg=student.total/inputs.length;
+
+student.level=gradeSystemTotal(student.total);
+student.best=best.sub+" ("+best.marks+")";
+student.weak=weak.sub+" ("+weak.marks+")";
+student.comment=generateComment(avg);
+
+let db=JSON.parse(localStorage.getItem(key))||[];
+db.push(student);
+
+db.sort((a,b)=>b.total-a.total);
+db.forEach((s,i)=>s.position=i+1);
+
+localStorage.setItem(key,JSON.stringify(db));
+alert("Saved");
+loadAllDatabases();
+}
+
+function downloadPDF(key,index){
+const db=JSON.parse(localStorage.getItem(key))||[];
+const s=db[index];
+
+const { jsPDF } = window.jspdf;
+const doc=new jsPDF();
+
+doc.setFontSize(18);
+doc.text("Entanda Secondary School",105,15,null,null,"center");
+
+doc.setFontSize(11);
+doc.text(`Name: ${s.name}`,20,30);
+doc.text(`Adm: ${s.adm}`,20,38);
+doc.text(`Term: ${s.term}`,140,30);
+doc.text(`Year: ${s.year}`,140,38);
+
+let y=50;
+
+for(let sub in s.subjects){
+doc.text(`${sub}: ${s.subjects[sub].marks} (${s.subjects[sub].level})`,20,y);
+y+=8;
+}
+
+y+=5;
+doc.text(`Total: ${s.total}`,20,y);
+doc.text(`Grade: ${s.level}`,20,y+8);
+doc.text(`Position: ${s.position}`,20,y+16);
+
+y+=30;
+doc.text(`Best Subject: ${s.best}`,20,y);
+doc.text(`Weakest Subject: ${s.weak}`,20,y+8);
+
+y+=20;
+doc.text(`Comment: ${s.comment}`,20,y);
+
+const canvas=document.createElement('canvas');
+const ctx=canvas.getContext('2d');
+
+new Chart(ctx,{
+type:'line',
+data:{
+labels:Object.keys(s.subjects),
+datasets:[{data:Object.values(s.subjects).map(x=>x.marks)}]
+}
+});
+
+setTimeout(()=>{
+const img=canvas.toDataURL();
+doc.addImage(img,'PNG',20,y+10,160,60);
+doc.save(s.name+".pdf");
+},500);
+}
+
+function loadAllDatabases(){
+let db=JSON.parse(localStorage.getItem("Grade10_students"))||[];
+let div=document.getElementById("classDBs");
+
+if(!db.length){
+div.innerHTML="No Data";
+return;
+}
+
+let html="<table><tr><th>Name</th><th>Total</th><th>Grade</th><th>Position</th><th>PDF</th></tr>";
+
+db.forEach((s,i)=>{
+html+=`<tr>
+<td>${s.name}</td>
+<td>${s.total}</td>
+<td>${s.level}</td>
+<td>${s.position}</td>
+<td><button onclick="downloadPDF('Grade10_students',${i})">PDF</button></td>
+</tr>`;
+});
+
+html+="</table>";
+div.innerHTML=html;
+}
+
+</script>
+
+</body>
+</html>
